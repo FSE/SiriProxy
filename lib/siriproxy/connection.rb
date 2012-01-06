@@ -11,7 +11,65 @@ class SiriProxy::Connection < EventMachine::Connection
     self.other_connection.last_ref_id = ref_id if other_connection.last_ref_id != ref_id
   end
   
-  def initialize
+    #######################
+	#ReadSavedData
+SpeechIDFILE = File.expand_path("~/.siriproxy/speechId")
+AssistantIdFILE = File.expand_path("~/.siriproxy/assistantId")
+SessionValidationDataFILE = File.expand_path("~/.siriproxy/sessionValidationData")
+
+	def get_speechId
+	    begin
+		File.open(SpeechIDFILE, "r") {|file| self.speechId = file.read}
+		self.speechId_avail = true
+	    rescue SystemCallError
+		puts "[ERROR - SiriProy] Error opening the speechId file. Connect an iPhone4S first or create them manually!"
+	    end
+	end
+
+	def get_assistantId
+	    begin
+		File.open(AssistantIdFILE, "r") {|file| self.assistantId = file.read}
+		self.assistantId_avail = true
+	    rescue SystemCallError
+		puts "[ERROR - SiriProxy] Error opening the assistantId file. Connect an iPhone4S first or create them manually!"
+	    end
+	end
+
+	def get_validationData
+	    begin
+		File.open(SessionValidationDataFILE, "rb") {|file| self.sessionValidationData = file.read}
+		self.validationData_avail = true
+	    rescue SystemCallError
+		puts "[ERROR - SiriProxy] Error opening the sessionValidationData  file. Connect an iPhone4S first or create them manually!"
+	    end
+	end  
+
+  def checkHave4SData
+     if self.speechId != nil and self.assistantId != nil and self.sessionValidationData != nil
+
+        #writing keys
+        File.open(SpeechIDFILE,"w") do |file|
+           file.write(self.speechId)
+        end
+        File.open(AssistantIdFILE,"w") do |file|
+           file.write(self.assistantId)
+        end
+        File.open(SessionValidationDataFILE,"wb") do |file|
+	file.write(self.sessionValidationData)
+	#file.write("".unpack('H*').join(""))
+        end
+        puts "[Info - SiriProxy] Keys written to file"
+     end
+  end
+
+	def plist_blob(string)
+	string = [string].pack('H*')
+	#string = [string]
+	string.blob = true
+	string
+	end
+	
+def initialize
     super
     self.processed_headers = false
     self.output_buffer = ""
@@ -167,6 +225,76 @@ class SiriProxy::Connection < EventMachine::Connection
   end
   
   def prep_received_object(object)
+  	if object["properties"] != nil
+			if object["properties"]["validationData"] !=nil #&& !object["properties"]["validationData"].empty?
+				if self.is_4S
+        				puts "[Info - SiriProxy] using iPhone 4S validationData and saving it"
+					self.sessionValidationData = object["properties"]["validationData"].unpack('H*').join("")
+					checkHave4SData
+    				else
+    					get_validationData
+    					if self.validationData_avail
+        					puts "[Info - SiriProxy] using saved validationData"
+        					object["properties"]["validationData"] = plist_blob(self.sessionValidationData)
+        				else
+        					puts "[Info - SiriProxy] no validationData available :("
+        				end
+				end
+			end
+			if object["properties"]["sessionValidationData"] !=nil #&& !object["properties"]["sessionValidationData"].empty?
+				if self.is_4S
+        				puts "[Info -  SiriProxy] using iPhone 4S validationData and saving it"
+        				self.sessionValidationData = object["properties"]["sessionValidationData"].unpack('H*').join("")
+        				checkHave4SData
+    				else
+    					get_validationData
+    					if  self.validationData_avail
+        					puts "[Info - SiriProxy] using saved validationData"
+        					object["properties"]["sessionValidationData"] = plist_blob(self.sessionValidationData)
+        				else
+        					puts "[Info - SiriProxy] no validationData available :("
+        				end
+    				end
+			end
+			if object["properties"]["speechId"] !=nil #&& !object["properties"]["speechId"].empty?
+				if self.is_4S
+					puts "[Info - SiriProxy] using iPhone 4S speechID and saving it"
+        				self.speechId = object["properties"]["speechId"]
+        				checkHave4SData
+				else
+					if object["properties"]["speechId"].empty?
+						get_speechId
+						if speechId_avail
+							puts "[Info - SiriProxy] using saved speechID:  #{self.speechId}"
+        						object["properties"]["speechId"] = self.speechId
+        					else
+        						puts "[Info - SiriProxy] no speechId available :("
+        					end
+        				else
+        					puts "[Info - SiriProxy] using speechID sent by iPhone: #{object["properties"]["speechId"]}"
+        				end
+    				end
+			end
+			if object["properties"]["assistantId"] !=nil #&& !object["properties"]["assistantId"].empty?
+				if self.is_4S
+					puts "[Info - SiriProxy] using iPhone 4S  assistantId and saving it"
+					self.assistantId = object["properties"]["assistantId"]
+					checkHave4SData
+    				else
+    					if object["properties"]["assistantId"].empty?
+    						get_assistantId
+    						if assistantId_avail
+        						puts "[Info - SiriProxy] using saved assistantID - #{self.assistantId}"
+        						object["properties"]["assistantId"] = self.assistantId
+        					else
+        						puts "[Info - SiriProxy] no assistantId available :("
+        					end
+        				else
+        					puts "[Info - SiriProxy] using assistantID sent by iPhone: #{object["properties"]["assistantId"]}"
+        				end
+				end
+			end
+		end
     if object["refId"] == self.last_ref_id && @block_rest_of_session
       puts "[Info - Dropping Object from Guzzoni] #{object["class"]}" if $LOG_LEVEL > 1
       pp object if $LOG_LEVEL > 3
