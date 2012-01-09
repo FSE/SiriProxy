@@ -7,6 +7,8 @@ Siri Proxy is a proxy server for Apple's Siri "assistant." The idea is to allow 
 
 The main example I provide is a plugin to control [my thermostat](http://www.radiothermostat.com/latestnews.html#advanced) with Siri. It responds to commands such as, "What's the status of the thermostat?", or "Set the thermostat to 68 degrees", or even "What's the inside temperature?"
 
+This build also Caches the Valid tokens from an iPhone 4S so it can be used for an iPhone 4, or whatever you can get a Siri GUI on. The code was based from http://www.ketchup-mayo-senf.de/blog. which uses a outdated version of SiriProxy. I tried Westbaer's fork, but it kept crashing, so I made this one.
+
 Notice About Plugins
 --------------------
 
@@ -68,7 +70,8 @@ If you don't already have Ruby 1.9.3 installed through RVM, please do so in orde
 	
 **Set up SiriProxy**
 
-Clone this repo locally, then navigate into the SiriProxy directory (the root of the repo). Then follow these instructions carefully. Note that nothing needs to be (or should be) done as root until you launch the server:
+Clone this repo locally (`git clone git://github.com/jaminmc/SiriProxy.git`), then navigate into the SiriProxy directory (the root of the repo). Then follow these instructions carefully. Note that nothing needs to be (or should be) done as root until you launch the server:
+
 
 1. Install Rake and Bundler:  
 	`rvmsudo gem install rake bundler`  
@@ -113,7 +116,7 @@ FAQ
 
 **Will this let me run Siri on my iPhone 4, iPod Touch, iPhone 3G, Microwave, etc?**
 
-No. Please stop asking. 
+Yes, you need a Siri GUI like Spire to get it to work, and an Iphone 4S to connect to your server often to renew the Tokens on the server.
 
 **What is your opinion on h1siri, public SiriProxy servers, and other Siri "ports"?**
 
@@ -147,8 +150,10 @@ Just go into your phone's Settings app, then go to "General->Profiles." Your CA 
 
 **Does this require a jailbreak?**
 
+iPhone 4S:
 No. The only action you need to take on the phone is to install the root CA's public key.
 
+Iphone 4, 3Gs, iPod, etc, Yes, and you need a Siri GUI like Spire to get it to work.
 
 Acknowledgements
 ----------------
