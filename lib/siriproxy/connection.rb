@@ -110,7 +110,7 @@ def initialize
 				#puts "[Info - changed header] " + line
 				line["iPhone3,1"] = "iPhone4,1")
 			end
-		end
+		
 end  
     self.output_buffer << (line + "\x0d\x0a") #Restore the CR-LF to the end of the line
     
