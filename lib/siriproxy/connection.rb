@@ -97,7 +97,21 @@ def initialize
       puts "[Debug - #{self.name}] Found end of headers" if $LOG_LEVEL > 3
       set_binary_mode
       self.processed_headers = true
-    end  
+		##############
+		#Check for User Agent
+		elsif line.match(/^User-Agent:/)
+			if line.match(/iPhone4,1;/)
+				puts "[Info - SiriProxy] iPhone 4S connected"
+				self.is_4S = true
+			else
+				puts "[Info - SiriProxy] - iPhone 4 or other non 4S connected. Using saved keys"
+				self.is_4S = false
+				#maybe change header... but not for now
+				#puts "[Info - changed header] " + line
+				#line["iPhone3,1"] = "iPhone4,1")
+			end
+		end
+end  
     self.output_buffer << (line + "\x0d\x0a") #Restore the CR-LF to the end of the line
     
     flush_output_buffer()
