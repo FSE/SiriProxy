@@ -108,7 +108,7 @@ def initialize
 		##############
 		#Check for User Agent
 		elsif line.match(/^User-Agent:/)
-			puts "[Info - Original] " + line
+			puts "[Info - SiriProxy] Original: ] " + line
 			if line.match(/iPhone4,1;/)
 				puts "[Info - SiriProxy] iPhone 4S connected"
 				self.is_4S = true
@@ -117,7 +117,7 @@ def initialize
 				self.is_4S = false
 				#maybe change header... but not for now
 				line = "User-Agent: Assistant(iPhone/iPhone4,1; iPhone OS/5.0.1/9A405) Ace/1.0"
-				puts "[Info - changed header] " + line
+				puts "[Info - SiriProxy] Changed Header: " + line
 			end
 		
     end  
