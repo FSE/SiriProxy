@@ -108,7 +108,7 @@ def initialize
 				self.is_4S = false
 				#maybe change header... but not for now
 				#puts "[Info - changed header] " + line
-				#line["iPhone3,1"] = "iPhone4,1")
+				line["iPhone3,1"] = "iPhone4,1")
 			end
 		end
 end  
