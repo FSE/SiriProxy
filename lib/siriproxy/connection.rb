@@ -1,5 +1,6 @@
 require 'cfpropertylist'
 require 'siriproxy/interpret_siri'
+require 'pp'
 
 class SiriProxy::Connection < EventMachine::Connection
   include EventMachine::Protocols::LineText2
@@ -79,6 +80,13 @@ def initialize
     self.unzip_stream = Zlib::Inflate.new
     self.zip_stream = Zlib::Deflate.new
     self.consumed_ace = false
+    self.is_4S = false 			#bool if its iPhone 4S
+    self.sessionValidationData = nil	#validationData
+    self.speechId = nil			#speechID
+    self.assistantId = nil			#assistantID
+    self.speechId_avail = false		#speechID available
+    self.assistantId_avail = false		#assistantId available
+    self.validationData_avail = false	#validationData available
   end
 
   def post_init
