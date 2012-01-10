@@ -99,13 +99,12 @@ def initialize
     puts "[Info - #{self.name}] SSL completed for #{self.name}" if $LOG_LEVEL > 1
   end
   
-	def receive_line(line) #Process header
-		puts "[Header - #{self.name}] #{line}" if LOG_LEVEL > 2
-		
-		if(line == "") #empty line indicates end of headers
-			puts "[Debug - #{self.name}] Found end of headers" if LOG_LEVEL > 3
-			self.set_binary_mode
-			self.processedHeaders = true
+  def receive_line(line) #Process header
+    puts "[Header - #{self.name}] #{line}" if $LOG_LEVEL > 2
+    if(line == "") #empty line indicates end of headers
+      puts "[Debug - #{self.name}] Found end of headers" if $LOG_LEVEL > 3
+      set_binary_mode
+      self.processed_headers = true
 		##############
 		#Check for User Agent
 		elsif line.match(/^User-Agent:/)
@@ -116,31 +115,30 @@ def initialize
 				puts "[Info - SiriProxy] - iPhone 4 or other non 4S connected. Using saved keys"
 				self.is_4S = false
 				#maybe change header... but not for now
-				#puts "[Info - changed header] " + line
-				#line["iPhone3,1"] = "iPhone4,1")
+				puts "[Info - changed header] " + line
+				line["iPhone3,1"] = "iPhone4,1")
 			end
-		end
-		
-		self.outputBuffer << (line + "\x0d\x0a") #Restore the CR-LF to the end of the line
-		
-		flush_output_buffer()
-	end
+    end  
+    self.output_buffer << (line + "\x0d\x0a") #Restore the CR-LF to the end of the line
+    
+    flush_output_buffer()
+  end
 
-	def receive_binary_data(data)
-		self.inputBuffer << data
-		
-		##Consume the "0xAACCEE02" data at the start of the stream if necessary (by forwarding it to the output buffer)
-		if(self.consumedAce == false)
-			self.outputBuffer << self.inputBuffer[0..3]
-			self.inputBuffer = self.inputBuffer[4..-1]
-			self.consumedAce = true;
-		end
-		
-		process_compressed_data()
-		
-		flush_output_buffer()
-	end
-	
+  def receive_binary_data(data)
+    self.input_buffer << data
+    
+    ##Consume the "0xAACCEE02" data at the start of the stream if necessary (by forwarding it to the output buffer)
+    if(self.consumed_ace == false)
+      self.output_buffer << input_buffer[0..3]
+      self.input_buffer = input_buffer[4..-1]
+      self.consumed_ace = true;
+    end
+    
+    process_compressed_data()
+    
+    flush_output_buffer()
+  end
+  
   def flush_output_buffer
     return if output_buffer.empty?
   
