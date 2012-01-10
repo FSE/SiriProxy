@@ -108,15 +108,16 @@ def initialize
 		##############
 		#Check for User Agent
 		elsif line.match(/^User-Agent:/)
-			if line.match(/iPhone4,1;/)
+				puts "[Info - Original UA] " + line
+				if line.match(/iPhone4,1;/)
 				puts "[Info - SiriProxy] iPhone 4S connected"
 				self.is_4S = true
 			else
 				puts "[Info - SiriProxy] - iPhone 4 or other non 4S connected. Using saved keys"
 				self.is_4S = false
 				#maybe change header... but not for now
-				puts "[Info - changed header] " + line
 				line["iPhone3,1"] = "iPhone4,1"
+				puts "[Info - changed header] " + line
 			end
 		
     end  
