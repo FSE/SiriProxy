@@ -2,6 +2,9 @@ require 'cfpropertylist'
 require 'siriproxy/interpret_siri'
 require 'pp'
 require 'singleton'
+require 'siriproxy/dbclasses.rb'
+require 'siriproxy/db_connection'
+require 'siriproxy/functions'
 
 class SiriProxy::Connection < EventMachine::Connection
     include EventMachine::Protocols::LineText2
