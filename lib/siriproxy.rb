@@ -1,9 +1,6 @@
 require 'eventmachine'
 require 'zlib'
 require 'pp'
-require 'db_classes.rb'
-require 'db_connection'
-require 'functions'
 
 class String
     def to_hex(seperator=" ")

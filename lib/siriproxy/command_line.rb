@@ -179,6 +179,9 @@ class SiriProxy::CommandLine
     require 'bundler/setup'
     
     require 'siriproxy'
+    require 'siriproxy/dbclasses.rb'
+    require 'siriproxy/db_connection'
+    require 'siriproxy/functions'
     require 'siriproxy/connection'
     require 'siriproxy/connection/iphone'
     require 'siriproxy/connection/guzzoni'
