@@ -240,5 +240,5 @@ class ConfigDao
             end
             
         end
-        
-        
+    end
+end
