@@ -1,10 +1,10 @@
 # -*- encoding : utf-8 -*-
 require 'mysql'
 #DATABASE CONNECTION 
-DB_HOST=$APP_CONFIG.DB_HOST
-DB_USER=$APP_CONFIG.DB_USER
-DB_PASS=$APP_CONFIG.DB_PASS
-DB_DATABASE=$APP_CONFIG.DB_DATABASE
+DB_HOST=$APP_CONFIG.db_host
+DB_USER=$APP_CONFIG.db_user
+DB_PASS=$APP_CONFIG.db_pass
+DB_DATABASE=$APP_CONFIG.db_database
 
 def db_connect() 
     begin
