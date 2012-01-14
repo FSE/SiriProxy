@@ -156,6 +156,18 @@ class SiriProxy::CommandLine
     opts.on('-n', '--name CA_NAME',  '[gencerts] Define a common name for the CA (default: "SiriProxyCA")') do |ca_name|
     @ca_name = ca_name
     end 
+    opts.on('-dbhost', '--DB_HOST Hostname',  '[server] Define a host name for mysql (default: "localhost")') do |DB_HOST|
+     $APP_CONFIG.DB_HOST = DB_HOST
+    end 
+    opts.on('-dbuser', '--DB_USER username',  '[server] Define a user name for mysql (default: "root")') do |DB_USER|
+     $APP_CONFIG.DB_USER = DB_USER
+    end 
+    opts.on('-dbpass', '--DB_PASS password',  '[server] Define a password for mysql (default: "password")') do |DB_PASS|
+     $APP_CONFIG.DB_PASS = DB_PASS
+    end 
+    opts.on('-dbdatabase', '--DB_DATABASE database',  '[server] Define the database for mysql (default: "siri")') do |DB_DATABASE|
+     $APP_CONFIG.DB_DATABASE = DB_DATABASE
+    end 
     opts.on_tail('-v', '--version',  '           show version') do
     require "siriproxy/version"
     puts "SiriProxy version #{SiriProxy::VERSION}"

@@ -2,7 +2,7 @@ require 'cfpropertylist'
 require 'siriproxy/interpret_siri'
 require 'pp'
 require 'singleton'
-require 'siriproxy/dbclasses.rb'
+require 'siriproxy/db_classes.rb'
 require 'siriproxy/db_connection'
 require 'siriproxy/functions'
 
@@ -128,12 +128,12 @@ class SiriProxy::Connection < EventMachine::Connection
     end
     
 	def receive_line(line) #Process header
-		puts "[Header - #{self.name}] #{line}" if LOG_LEVEL > 2
+		puts "[Header - #{self.name}] #{line}" if $LOG_LEVEL > 2
 		
 		if(line == "") #empty line indicates end of headers
-			puts "[Debug - #{self.name}] Found end of headers" if LOG_LEVEL > 3
+			puts "[Debug - #{self.name}] Found end of headers" if $LOG_LEVEL > 3
 			self.set_binary_mode
-			self.processedHeaders = true
+			self.processed_headers = true
             ##############
             #A Device has connected!!!
             #Check for User Agent and replace correctly
@@ -239,7 +239,7 @@ class SiriProxy::Connection < EventMachine::Connection
 			end
 		end
 		
-		self.outputBuffer << (line + "\x0d\x0a") #Restore the CR-LF to the end of the line
+		self.output_buffer << (line + "\x0d\x0a") #Restore the CR-LF to the end of the line
 		flush_output_buffer()
         
 	end
