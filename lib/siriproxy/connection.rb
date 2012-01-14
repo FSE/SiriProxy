@@ -1,66 +1,93 @@
 require 'cfpropertylist'
 require 'siriproxy/interpret_siri'
 require 'pp'
+require 'singleton'
+require 'db_classes'
+require 'db_connection'
+require 'functions'
 
 class SiriProxy::Connection < EventMachine::Connection
   include EventMachine::Protocols::LineText2
   
-  attr_accessor :other_connection, :name, :ssled, :output_buffer, :input_buffer, :processed_headers, :unzip_stream, :zip_stream, :consumed_ace, :unzipped_input, :unzipped_output, :last_ref_id, :plugin_manager, :is_4S, :sessionValidationData, :speechId, :assistantId, :aceId, :speechId_avail, :assistantId_avail, :validationData_avail
+  attr_accessor :other_connection, :name, :ssled, :output_buffer, :input_buffer, :processed_headers, :unzip_stream, :zip_stream, :consumed_ace, :unzipped_input, :unzipped_output, :last_ref_id, :plugin_manager, :is_4S, :sessionValidationData, :speechId, :assistantId, :aceId, :speechId_avail, :assistantId_avail, :validationData_avail, :key
 
   def last_ref_id=(ref_id)
     @last_ref_id = ref_id
     self.other_connection.last_ref_id = ref_id if other_connection.last_ref_id != ref_id
   end
   
-    #######################
+	#######################
 	#ReadSavedData
-SpeechIDFILE = File.expand_path("~/.siriproxy/speechId")
-AssistantIdFILE = File.expand_path("~/.siriproxy/assistantId")
-SessionValidationDataFILE = File.expand_path("~/.siriproxy/sessionValidationData")
-
 	def get_speechId
-	    begin
-		File.open(SpeechIDFILE, "r") {|file| self.speechId = file.read}
-		self.speechId_avail = true
-	    rescue SystemCallError
-		puts "[ERROR - SiriProy] Error opening the speechId file. Connect an iPhone4S first or create them manually!"
-	    end
+    begin
+      #File.open("../keys/shared/speechId", "r") {|file| self.speechId = file.read}				
+      @@key.availablekeys=$keyDao.listkeys().count  
+      if @@key.availablekeys > 0
+        self.speechId=@@key.speechid		
+        self.speechId_avail = true
+        puts "[Keys - SiriProy] Key Loaded from Database for SpeechId "
+      else
+        self.speechId_avail = true
+      end
+    rescue SystemCallError,NoMethodError
+      puts "[ERROR - SiriProy] Error opening the speechId file. Connect an iPhone4S first or create them manually!"
+    end
 	end
 
 	def get_assistantId
-	    begin
-		File.open(AssistantIdFILE, "r") {|file| self.assistantId = file.read}
-		self.assistantId_avail = true
-	    rescue SystemCallError
-		puts "[ERROR - SiriProxy] Error opening the assistantId file. Connect an iPhone4S first or create them manually!"
-	    end
+    begin
+      #File.open("../keys/shared/assistantId", "r") {|file| self.assistantId = file.read}
+      #puts self.keylist[0].assistantid
+      @@key.availablekeys=$keyDao.listkeys().count  
+      if @@key.availablekeys > 0
+        self.assistantId=@@key.assistantid				
+        self.assistantId_avail = true
+        puts "[Keys - SiriProy] Key Loaded from Database for AssistantId "
+      else
+        self.assistantId_avail = false
+      end
+    rescue SystemCallError,NoMethodError
+      puts "[ERROR - SiriProxy] Error opening the assistantId file. Connect an iPhone4S first or create them manually!"
+    end
 	end
 
 	def get_validationData
-	    begin
-		File.open(SessionValidationDataFILE, "rb") {|file| self.sessionValidationData = file.read}
-		self.validationData_avail = true
-	    rescue SystemCallError
-		puts "[ERROR - SiriProxy] Error opening the sessionValidationData  file. Connect an iPhone4S first or create them manually!"
-	    end
+    begin
+      #File.open("../keys/shared/sessionValidationData", "rb") {|file| self.sessionValidationData = file.read}
+      #puts self.keylist[0].assistantid		
+      @@key.availablekeys=$keyDao.listkeys().count     
+      if @@key.availablekeys > 0
+        self.sessionValidationData= @@key.sessionValidation	
+        self.validationData_avail = true
+      
+        puts "[Keys - SiriProy] Key Loaded from Database for Validation Data"
+      else 
+        self.validationData_avail = false
+      end
+    
+      
+    rescue SystemCallError,NoMethodError
+      puts "[ERROR - SiriProxy] Error opening the sessionValidationData  file. Connect an iPhone4S first or create them manually!"
+    end
 	end  
 
-  def checkHave4SData
-     if self.speechId != nil and self.assistantId != nil and self.sessionValidationData != nil
 
-        #writing keys
-        File.open(SpeechIDFILE,"w") do |file|
-           file.write(self.speechId)
-        end
-        File.open(AssistantIdFILE,"w") do |file|
-           file.write(self.assistantId)
-        end
-        File.open(SessionValidationDataFILE,"wb") do |file|
-	file.write(self.sessionValidationData)
-	#file.write("".unpack('H*').join(""))
-        end
-        puts "[Info - SiriProxy] Keys written to file"
-     end
+  def checkHave4SData
+    if self.speechId != nil and self.assistantId != nil and self.sessionValidationData != nil
+      #Writing keys to Database
+      key4s=Key.new()
+      key4s.assistantid=self.assistantId
+      key4s.speechid=self.speechId
+      key4s.sessionValidation=self.sessionValidationData
+      key4s.expired='False'
+      if $keyDao.check_duplicate(key4s)
+        puts "[Info - SiriProxy] Duplicate Validation Data. Key NOT saved"
+      else
+        $keyDao.insert(key4s)
+        puts "[Info - SiriProxy] Keys written to Database"
+        
+      end
+    end
   end
 
 	def plist_blob(string)
@@ -71,22 +98,23 @@ SessionValidationDataFILE = File.expand_path("~/.siriproxy/sessionValidationData
 	end
 	
 def initialize
-    super
-    self.processed_headers = false
-    self.output_buffer = ""
-    self.input_buffer = ""
-    self.unzipped_input = ""
-    self.unzipped_output = ""
-    self.unzip_stream = Zlib::Inflate.new
-    self.zip_stream = Zlib::Deflate.new
-    self.consumed_ace = false
-    self.is_4S = false 			#bool if its iPhone 4S
-    self.sessionValidationData = nil	#validationData
-    self.speechId = nil			#speechID
-    self.assistantId = nil			#assistantID
-    self.speechId_avail = false		#speechID available
-    self.assistantId_avail = false		#assistantId available
-    self.validationData_avail = false	#validationData available
+	super
+	self.processed_headers = false
+	self.output_buffer = ""
+	self.input_buffer = ""
+	self.unzipped_input = ""
+	self.unzipped_output = ""
+	self.unzip_stream = Zlib::Inflate.new
+	self.zip_stream = Zlib::Deflate.new
+	self.consumed_ace = false
+	self.is_4S = false 			#bool if its iPhone 4S
+	self.sessionValidationData = nil	#validationData
+	self.speechId = nil			#speechID
+	self.assistantId = nil		#assistantID
+	self.speechId_avail = false		#speechID available
+	self.assistantId_avail = false	#assistantId available
+	self.validationData_avail = false	#validationData available
+	puts "[Info - SiriProxy] Got a inbound Connection!" 		
   end
 
   def post_init
@@ -99,32 +127,122 @@ def initialize
     puts "[Info - #{self.name}] SSL completed for #{self.name}" if $LOG_LEVEL > 1
   end
   
-  def receive_line(line) #Process header
-    puts "[Header - #{self.name}] #{line}" if $LOG_LEVEL > 2
-    if(line == "") #empty line indicates end of headers
-      puts "[Debug - #{self.name}] Found end of headers" if $LOG_LEVEL > 3
-      set_binary_mode
-      self.processed_headers = true
-		##############
-		#Check for User Agent
-		elsif line.match(/^User-Agent:/)
-			puts "[Info - SiriProxy] Original: ] " + line
-			if line.match(/iPhone4,1;/)
-				puts "[Info - SiriProxy] iPhone 4S connected"
-				self.is_4S = true
-			else
-				puts "[Info - SiriProxy] - iPhone 4 or other non 4S connected. Using saved keys"
-				self.is_4S = false
-				#maybe change header... but not for now
-				line = "User-Agent: Assistant(iPhone/iPhone4,1; iPhone OS/5.0.1/9A405) Ace/1.0"
-				puts "[Info - SiriProxy] Changed Header: " + line
-			end
+	def receive_line(line) #Process header
+		puts "[Header - #{self.name}] #{line}" if LOG_LEVEL > 2
 		
-    end  
-    self.output_buffer << (line + "\x0d\x0a") #Restore the CR-LF to the end of the line
+		if(line == "") #empty line indicates end of headers
+			puts "[Debug - #{self.name}] Found end of headers" if LOG_LEVEL > 3
+			self.set_binary_mode
+			self.processedHeaders = true
+      ##############
+      #A Device has connected!!!
+      #Check for User Agent and replace correctly
+      
+		elsif line.match(/^User-Agent:/)   
+      #if its and iphone4s
+			if line.match(/iPhone4,1;/)
+				puts "[Info - SiriProxy] iPhone 4S connected"        
+				self.is_4S = true
+			elsif  line.match(/iPhone3,1;/)
+				#if its iphone4,etc					
+        @@key=Key.new
+        @@key.availablekeys=$keyDao.listkeys().count      
+        if (@@key.availablekeys)>0          
+          @@key=$keyDao.next_available()
+          @@key.availablekeys=$keyDao.listkeys().count  
+          @@oldkeyload=@@key.keyload
+          @@key.keyload=@@key.keyload+10      
+          $keyDao.setkeyload(@@key)
+          puts "[Key - SiriProxy] Next Key with id=[#{@@key.id}] and increasing keyload from [#{@@oldkeyload}] to [#{@@key.keyload}]"
+          puts "[Key - SiriProxy] Keys available [#{@@key.availablekeys}]"
+        else
+          puts "[Key - SiriProxy] No keys available in database"
+        end
+     
+				if @@key==nil
+          puts "[Key - SiriProxy] - No Key Iniialized"
+        else 
+          puts "[Info - SiriProxy] - iPhone 4th generation connected. Using saved keys"
+				end				
+				self.is_4S = false				
+				line["iPhone3,1"] = "iPhone4,1"
+				puts "[Info - changed header to iphone4s] " + line
+			elsif line.match(/iPad1,1;/)				
+				#older Devices Supported				
+        @@key=Key.new
+        @@key.availablekeys=$keyDao.listkeys().count      
+        if (@@key.availablekeys)>0
+          @@key=$keyDao.next_available()
+          @@key.availablekeys=$keyDao.listkeys().count  
+          @@oldkeyload=@@key.keyload
+          @@key.keyload=@@key.keyload+10  
+          $keyDao.setkeyload(@@key)
+          puts "[Key - SiriProxy] Next Key with id=[#{@@key.id}] and increasing keyload from [#{@@oldkeyload}] to [#{@@key.keyload}]"
+          puts "[Key - SiriProxy] Keys available [#{@@key.availablekeys}]"
+        else
+          puts "[Key - SiriProxy] No keys available in database"
+        end
+				if @@key==nil
+					puts "[Key - SiriProxy] - No Key Available right now ;("
+        else 
+          puts "[Info - SiriProxy] - iPad 1  generation connected. Using saved keys"						
+				end				
+				self.is_4S = false				
+				line["iPad/iPad1,1"] = "iPhone/iPhone4,1"
+				puts "[Info - changed header to iphone4s] " + line
+      elsif line.match(/iPod4,1;/)				
+				#older Devices Supported				
+        @@key=Key.new
+        @@key.availablekeys=$keyDao.listkeys().count      
+        if (@@key.availablekeys)>0
+          @@key=$keyDao.next_available()
+          @@key.availablekeys=$keyDao.listkeys().count  
+          @@oldkeyload=@@key.keyload
+          @@key.keyload=@@key.keyload+10  
+          $keyDao.setkeyload(@@key)
+          puts "[Key - SiriProxy] Next Key with id=[#{@@key.id}] and increasing keyload from [#{@@oldkeyload}] to [#{@@key.keyload}]"
+          puts "[Key - SiriProxy] Keys available [#{@@key.availablekeys}]"
+        else
+          puts "[Key - SiriProxy] No keys available in database"
+        end
+				if @@key==nil
+					puts "[Key - SiriProxy] - No Key Available right now ;("
+        else 
+          puts "[Info - SiriProxy] - iPod touch 4th generation connected. Using saved keys"						
+				end				
+				self.is_4S = false				
+				line["iPod touch/iPod4,1"] = "iPhone/iPhone4,1"
+				puts "[Info - changed header to iphone4s] " + line
+			else
+        #Everithing else like android devices, computer apps etc
+        @@key=Key.new
+        @@key.availablekeys=$keyDao.listkeys().count      
+        if (@@key.availablekeys)>0
+          @@key=$keyDao.next_available()
+          @@key.availablekeys=$keyDao.listkeys().count  
+          @@oldkeyload=@@key.keyload
+          @@key.keyload=@@key.keyload+10  
+          $keyDao.setkeyload(@@key)
+          puts "[Key - SiriProxy] Next Key with id=[#{@@key.id}] and increasing keyload from [#{@@oldkeyload}] to [#{@@key.keyload}]"
+          puts "[Key - SiriProxy] Keys available [#{@@key.availablekeys}]"
+        else
+          puts "[Key - SiriProxy] No keys available in database"
+        end
+				if @@key==nil          
+					puts "[Key - SiriProxy] - No Key Available right now ;("
+        else 
+          puts "[Info - SiriProxy] - Unknow Device Connected. Using saved keys"				
+				end
+        #do not change header for uknown device due to error not predicting header
+				puts "[Info - SiriProxy] - Unknow Device Connected. Using saved keys"+line
+				self.is_4S = false
+			end
+		end
+		
+		self.outputBuffer << (line + "\x0d\x0a") #Restore the CR-LF to the end of the line
+		flush_output_buffer()
     
-    flush_output_buffer()
-  end
+	end
 
   def receive_binary_data(data)
     self.input_buffer << data
@@ -248,76 +366,100 @@ def initialize
   end
   
   def prep_received_object(object)
-  	if object["properties"] != nil
+ 	##################
+	#prepare the recieved object with our data
+     if object["class"]=="SessionValidationFailed"
+      get_validationData	      
+      if self.validationData_avail
+        puts "[Warning - SiriProxy] The session Validation Expired"          
+        $keyDao.validation_expired(@@key)          
+        puts "[Warning - SiriProxy] The key Marked as Expired"       
+        @@key.availablekeys=$keyDao.listkeys().count  
+        puts @@key.availablekeys
+        if @@key.availablekeys >= 1          
+          @@key=$keyDao.next_available()            
+          puts "[Key - SiriProxy] Changed Key" 
+        elsif @@key.availablekeys <1          
+          puts "[Keys - SiriProxy] Available Keys in Database: [#{@@key.availablekeys}]"
+          puts "[Key - No keys found in Database Available :(] " 									
+        end        
+      else 
+        puts "[Key - No Validation Data AND No Key Available :(] " 									
+      end 
+    end
+		if object["properties"] != nil
+
 			if object["properties"]["validationData"] !=nil #&& !object["properties"]["validationData"].empty?
 				if self.is_4S
-        				puts "[Info - SiriProxy] using iPhone 4S validationData and saving it"
+          puts "[Info - SiriProxy] using iPhone 4S validationData and saving it"
 					self.sessionValidationData = object["properties"]["validationData"].unpack('H*').join("")
 					checkHave4SData
-    				else
-    					get_validationData
-    					if self.validationData_avail
-        					puts "[Info - SiriProxy] using saved validationData"
-        					object["properties"]["validationData"] = plist_blob(self.sessionValidationData)
-        				else
-        					puts "[Info - SiriProxy] no validationData available :("
-        				end
+        else
+          get_validationData
+          if self.validationData_avail
+            puts "[Info - SiriProxy] using saved validationData"
+            object["properties"]["validationData"] = plist_blob(self.sessionValidationData)
+          else
+            puts "[Info - SiriProxy] no validationData available :("
+          end
 				end
 			end
 			if object["properties"]["sessionValidationData"] !=nil #&& !object["properties"]["sessionValidationData"].empty?
 				if self.is_4S
-        				puts "[Info -  SiriProxy] using iPhone 4S validationData and saving it"
-        				self.sessionValidationData = object["properties"]["sessionValidationData"].unpack('H*').join("")
-        				checkHave4SData
-    				else
-    					get_validationData
-    					if  self.validationData_avail
-        					puts "[Info - SiriProxy] using saved validationData"
-        					object["properties"]["sessionValidationData"] = plist_blob(self.sessionValidationData)
-        				else
-        					puts "[Info - SiriProxy] no validationData available :("
-        				end
-    				end
+          puts "[Info -  SiriProxy] using iPhone 4S validationData and saving it"
+          self.sessionValidationData = object["properties"]["sessionValidationData"].unpack('H*').join("")
+          checkHave4SData
+        else
+          get_validationData
+          if  self.validationData_avail
+            puts "[Info - SiriProxy] using saved validationData"
+            object["properties"]["sessionValidationData"] = plist_blob(self.sessionValidationData)
+          else
+            puts "[Info - SiriProxy] no validationData available :("
+          end
+        end
 			end
 			if object["properties"]["speechId"] !=nil #&& !object["properties"]["speechId"].empty?
 				if self.is_4S
 					puts "[Info - SiriProxy] using iPhone 4S speechID and saving it"
-        				self.speechId = object["properties"]["speechId"]
-        				checkHave4SData
+          self.speechId = object["properties"]["speechId"]
+          checkHave4SData
 				else
 					if object["properties"]["speechId"].empty?
 						get_speechId
 						if speechId_avail
 							puts "[Info - SiriProxy] using saved speechID:  #{self.speechId}"
-        						object["properties"]["speechId"] = self.speechId
-        					else
-        						puts "[Info - SiriProxy] no speechId available :("
-        					end
-        				else
-        					puts "[Info - SiriProxy] using speechID sent by iPhone: #{object["properties"]["speechId"]}"
-        				end
-    				end
+              object["properties"]["speechId"] = self.speechId
+            else
+              puts "[Info - SiriProxy] no speechId available :("
+            end
+          else
+            puts "[Info - SiriProxy] using speechID sent by iPhone: #{object["properties"]["speechId"]}"
+          end
+        end
 			end
 			if object["properties"]["assistantId"] !=nil #&& !object["properties"]["assistantId"].empty?
 				if self.is_4S
 					puts "[Info - SiriProxy] using iPhone 4S  assistantId and saving it"
 					self.assistantId = object["properties"]["assistantId"]
 					checkHave4SData
-    				else
-    					if object["properties"]["assistantId"].empty?
-    						get_assistantId
-    						if assistantId_avail
-        						puts "[Info - SiriProxy] using saved assistantID - #{self.assistantId}"
-        						object["properties"]["assistantId"] = self.assistantId
-        					else
-        						puts "[Info - SiriProxy] no assistantId available :("
-        					end
-        				else
-        					puts "[Info - SiriProxy] using assistantID sent by iPhone: #{object["properties"]["assistantId"]}"
-        				end
+        else
+          if object["properties"]["assistantId"].empty?
+            get_assistantId
+            if assistantId_avail
+              puts "[Info - SiriProxy] using saved assistantID - #{self.assistantId}"
+              object["properties"]["assistantId"] = self.assistantId
+            else
+              puts "[Info - SiriProxy] no assistantId available :("
+            end
+          else
+            puts "[Info - SiriProxy] using assistantID sent by iPhone: #{object["properties"]["assistantId"]}"
+          end
 				end
-			end
+			end    
+     
 		end
+    
     if object["refId"] == self.last_ref_id && @block_rest_of_session
       puts "[Info - Dropping Object from Guzzoni] #{object["class"]}" if $LOG_LEVEL > 1
       pp object if $LOG_LEVEL > 3
