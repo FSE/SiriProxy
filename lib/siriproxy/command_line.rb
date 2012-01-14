@@ -1,6 +1,7 @@
 require 'optparse'
 require 'yaml'
 require 'ostruct'
+require 'mysql'
 
 # @todo want to make SiriProxy::Commandline without having to
 # require 'siriproxy'. Im sure theres a better way.
@@ -181,7 +182,6 @@ Options:
     require 'siriproxy/connection'
     require 'siriproxy/connection/iphone'
     require 'siriproxy/connection/guzzoni'
-
     require 'siriproxy/plugin'
     require 'siriproxy/plugin_manager'
   end
