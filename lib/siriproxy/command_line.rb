@@ -13,7 +13,7 @@ class SiriProxy::CommandLine
     BANNER = <<-EOS
     Siri Proxy is a proxy server for Apple's Siri "assistant." The idea is to allow for the creation of custom handlers for different actions. This can allow developers to easily add functionality to Siri.
     
-    See: http://github.com/jaminmc/SiriProxy/
+    See: http://github.com/FSE/SiriProxy/
     
     Usage: siriproxy COMMAND OPTIONS
     
@@ -117,12 +117,12 @@ class SiriProxy::CommandLine
     else
     branch_opt = @branch ? "-b #{@branch}" : ""
     @branch = "master" if @branch == nil
-    puts "=== Installing latest code from git://github.com/jaminmc/SiriProxy.git [#{@branch}] ==="
+    puts "=== Installing latest code from git://github.com/FSE/SiriProxy.git [#{@branch}] ==="
     
     tmp_dir = "/tmp/SiriProxy.install." + (rand 9999).to_s.rjust(4, "0")
     
     `mkdir -p #{tmp_dir}`
-    puts `git clone #{branch_opt} git://github.com/jaminmc/SiriProxy.git #{tmp_dir}`  if $?.exitstatus == 0
+    puts `git clone #{branch_opt} git://github.com/FSE/SiriProxy.git #{tmp_dir}`  if $?.exitstatus == 0
     puts "=== Performing Rake Install ===" if $?.exitstatus == 0
     puts `cd #{tmp_dir} && rake install`  if $?.exitstatus == 0
     puts "=== Bundling ===" if $?.exitstatus == 0
@@ -153,19 +153,19 @@ class SiriProxy::CommandLine
     opts.on('-b', '--branch BRANCH', '[update]   Choose the branch to update from (default: master)') do |branch|
     @branch = branch
     end
-    opts.on('-n', '--name CA_NAME',  '[gencerts] Define a common name for the CA (default: "SiriProxyCA")') do |ca_name|
+    opts.on('-n', '--name CA_NAME',  '[gencerts]   Define a common name for the CA (default: "SiriProxyCA")') do |ca_name|
     @ca_name = ca_name
     end 
-    opts.on('-dbhost', '--db_host Hostname',  '[server] Define a host name for mysql (default: "localhost")') do |db_host|
+    opts.on('-dbhost', '--db_host Hostname',  '[server]   Define a host name for mysql (default: "localhost")') do |db_host|
      $APP_CONFIG.db_host = db_host
     end 
-    opts.on('-dbuser', '--db_user username',  '[server] Define a user name for mysql (default: "root")') do |db_user|
+    opts.on('-dbuser', '--db_user username',  '[server]   Define a user name for mysql (default: "root")') do |db_user|
      $APP_CONFIG.db_user = db_user
     end 
-    opts.on('-dbpass', '--db_pass password',  '[server] Define a password for mysql (default: "password")') do |db_pass|
+    opts.on('-dbpass', '--db_pass password',  '[server]   Define a password for mysql (default: "password")') do |db_pass|
      $APP_CONFIG.db_pass = db_pass
     end 
-    opts.on('-dbdatabase', '--db_database database',  '[server] Define the database for mysql (default: "siri")') do |db_database|
+    opts.on('-dbdatabase', '--db_database database',  '[server]   Define the database for mysql (default: "siri")') do |db_database|
      $APP_CONFIG.db_database = db_database
     end 
     opts.on_tail('-v', '--version',  '           show version') do
